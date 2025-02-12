@@ -1,0 +1,99 @@
+# Basic configuration with Launch Template
+
+- name: Create an autoscaling group using launch template
+  amazon.aws.autoscaling_group:
+    name: example_asg
+    load_balancers: ['lb1', 'lb2']
+    availability_zones: ['eu-west-1a', 'eu-west-1b']
+    launch_template:
+      launch_template_name: 'template-1'
+    min_size: 1
+    max_size: 10
+    desired_capacity: 5
+    vpc_zone_identifier: ['subnet-abcd1234', 'subnet-1a2b3c4d']
+    tags:
+      - environment: production
+        propagate_at_launch: false
+
+# Rolling ASG Updates
+
+# Below is an example of how to assign a new launch template to an ASG and replace old instances.
+# By setting max_healthy_percentage to a value over 100 the old rolling-replacement behaviour of
+# scaling up before scaling in can be maintained.
+
+- name: Update autoscaling group with new template - instances are not replaced
+  amazon.aws.autoscaling_group:
+    name: example_asg
+    launch_template:
+      launch_template_name: template-2
+    health_check_period: 60
+    health_check_type: ELB
+    min_size: 2
+    max_size: 13
+    desired_capacity: 6
+    region: us-east-1
+
+- name: Replace 2 instances based on EC2 Instance ID by marking them for termination
+  amazon.aws.autoscaling_instance:
+    group_name: example_asg
+    state: terminated
+    instance_ids:
+      - i-b345231
+      - i-24c2931
+    decrement_desired_capacity: false
+    wait: true
+
+- name: Trigger rolling replacement of all instances that do not match the current configuration.
+  amazon.aws.autoscaling_instance_refresh:
+    group_name: example_asg
+    state: started
+    strategy: Rolling
+    preferences:
+      skip_matching: true
+      max_healthy_percentage: 125  # scale out before terminating instances during replacement
+
+# Basic Configuration with Launch Template
+
+- name: Example autoscaling group creation with a launch template
+  amazon.aws.autoscaling_group:
+    name: example_with_template
+    load_balancers: ['lb1', 'lb2']
+    availability_zones: ['eu-west-1a', 'eu-west-1b']
+    launch_template:
+      version: '1'
+      launch_template_name: 'lt-example'
+      launch_template_id: 'lt-123456'
+    min_size: 1
+    max_size: 10
+    desired_capacity: 5
+    vpc_zone_identifier: ['subnet-abcd1234', 'subnet-1a2b3c4d']
+    tags:
+      - environment: production
+        propagate_at_launch: false
+
+# Basic Configuration with Launch Template using mixed instance policy
+
+- name: Example autoscaling group creation with a mixed instance policy
+  amazon.aws.autoscaling_group:
+    name: example_with_policy
+    load_balancers: ['lb1', 'lb2']
+    availability_zones: ['eu-west-1a', 'eu-west-1b']
+    launch_template:
+      version: '1'
+      launch_template_name: 'lt-example'
+      launch_template_id: 'lt-123456'
+    mixed_instances_policy:
+      instance_types:
+        - t3a.large
+        - t3.large
+        - t2.large
+      instances_distribution:
+        on_demand_percentage_above_base_capacity: 0
+        spot_allocation_strategy: capacity-optimized
+    min_size: 1
+    max_size: 10
+    desired_capacity: 5
+    vpc_zone_identifier: ['subnet-abcd1234', 'subnet-1a2b3c4d']
+    tags:
+      - environment: production
+        propagate_at_launch: false
