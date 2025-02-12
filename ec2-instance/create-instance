@@ -1,0 +1,18 @@
+---
+- name: start an instance with a public IP address
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: start an instance with a public IP address
+      amazon.aws.ec2_instance:
+        name: "public-compute-instance"
+        key_name: "VPCProject"
+        vpc_subnet_id: subnet-0b827b8b55a2c198f
+        instance_type: t2.micro
+        security_group: default
+        network_interfaces:
+          - assign_public_ip: true
+        image_id: ami-04b4f1a9cf54c11d0
+        tags:
+          Environment: Testing
+        region: us-east-1  # Add the region here
