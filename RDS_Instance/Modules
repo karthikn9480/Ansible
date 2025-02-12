@@ -1,0 +1,103 @@
+# Note: These examples do not set authentication details, see the AWS Guide for details.
+- name: Create minimal aurora instance in default VPC and default subnet group
+  amazon.aws.rds_instance:
+    engine: aurora
+    db_instance_identifier: ansible-test-aurora-db-instance
+    instance_type: db.t3.small
+    password: "{{ password }}"
+    username: "{{ username }}"
+    cluster_id: ansible-test-cluster  # This cluster must exist - see rds_cluster to manage it
+
+- name: Create a DB instance using the default AWS KMS encryption key
+  amazon.aws.rds_instance:
+    id: test-encrypted-db
+    state: present
+    engine: mariadb
+    storage_encrypted: true
+    db_instance_class: db.t3.medium
+    username: "{{ username }}"
+    password: "{{ password }}"
+    allocated_storage: "{{ allocated_storage }}"
+
+- name: Remove the DB instance without a final snapshot
+  amazon.aws.rds_instance:
+    id: "{{ instance_id }}"
+    state: absent
+    skip_final_snapshot: true
+
+- name: Remove the DB instance with a final snapshot
+  amazon.aws.rds_instance:
+    id: "{{ instance_id }}"
+    state: absent
+    final_snapshot_identifier: "{{ snapshot_id }}"
+
+- name: Add a new security group without purge
+  amazon.aws.rds_instance:
+    id: "{{ instance_id }}"
+    state: present
+    vpc_security_group_ids:
+      - sg-0be17ba10c9286b0b
+    purge_security_groups: false
+  register: result
+
+# Add IAM role to db instance
+- name: Create IAM policy
+  amazon.aws.iam_managed_policy:
+    policy_name: "my-policy"
+    policy: "{{ lookup('file','files/policy.json') }}"
+    state: present
+  register: iam_policy
+
+- name: Create IAM role
+  community.aws.iam_role:
+    assume_role_policy_document: "{{ lookup('file','files/assume_policy.json') }}"
+    name: "my-role"
+    state: present
+    managed_policy: "{{ iam_policy.policy.arn }}"
+  register: iam_role
+
+- name: Create DB instance with added IAM role
+  amazon.aws.rds_instance:
+    id: "my-instance-id"
+    state: present
+    engine: postgres
+    engine_version: 14.2
+    username: "{{ username }}"
+    password: "{{ password }}"
+    db_instance_class: db.m6g.large
+    allocated_storage: "{{ allocated_storage }}"
+    iam_roles:
+      - role_arn: "{{ iam_role.arn }}"
+        feature_name: 's3Export'
+
+- name: Remove IAM role from DB instance
+  amazon.aws.rds_instance:
+    id: "my-instance-id"
+    state: present
+    purge_iam_roles: true
+
+# Modify the DB instance type without waiting for a maintenance window
+- name: Modify an RDS Instance
+  amazon.aws.rds_instance:
+    db_instance_identifier: mydbinstance123
+    instance_class: db.t2.small
+    apply_immediately: true
+  register: rds_instance
+
+# Restore DB instance from snapshot
+- name: Create a snapshot and wait until completion
+  amazon.aws.rds_instance_snapshot:
+    instance_id: 'my-instance-id'
+    snapshot_id: 'my-new-snapshot'
+    state: present
+    wait: true
+  register: snapshot
+
+- name: Restore DB from snapshot
+  amazon.aws.rds_instance:
+    id: 'my-restored-db'
+    creation_source: snapshot
+    snapshot_identifier: 'my-new-snapshot'
+    engine: mariadb
+    state: present
+  register: restored_db
