@@ -1,0 +1,201 @@
+# Note: These examples do not set authentication details, see the AWS Guide for details.
+
+- name: Terminate every running instance in a region. Use with EXTREME caution.
+  amazon.aws.ec2_instance:
+    state: absent
+    filters:
+      instance-state-name: running
+
+- name: restart a particular instance by its ID
+  amazon.aws.ec2_instance:
+    state: restarted
+    instance_ids:
+      - i-12345678
+
+- name: start an instance with a public IP address
+  amazon.aws.ec2_instance:
+    name: "public-compute-instance"
+    key_name: "prod-ssh-key"
+    vpc_subnet_id: subnet-5ca1ab1e
+    instance_type: c5.large
+    security_group: default
+    network_interfaces:
+      - assign_public_ip: true
+    image_id: ami-123456
+    tags:
+      Environment: Testing
+
+- name: start an instance and Add EBS
+  amazon.aws.ec2_instance:
+    name: "public-withebs-instance"
+    vpc_subnet_id: subnet-5ca1ab1e
+    instance_type: t2.micro
+    key_name: "prod-ssh-key"
+    security_group: default
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          volume_size: 16
+          delete_on_termination: true
+
+- name: start an instance and Add EBS volume from a snapshot
+  amazon.aws.ec2_instance:
+    name: "public-withebs-instance"
+    instance_type: t2.micro
+    image_id: ami-1234567890
+    vpc_subnet_id: subnet-5ca1ab1e
+    volumes:
+      - device_name: /dev/sda2
+        ebs:
+          snapshot_id: snap-1234567890
+
+- name: Create EC2 instance with termination protection turned on
+  amazon.aws.ec2_instance:
+    name: "my-ec2-instance"
+    vpc_subnet_id: subnet-5ca1ab1e
+    instance_type: t3.small
+    image_id: ami-123456
+    termination_protection: true
+    wait: true
+
+- name: start an instance with a cpu_options
+  amazon.aws.ec2_instance:
+    name: "public-cpuoption-instance"
+    vpc_subnet_id: subnet-5ca1ab1e
+    tags:
+      Environment: Testing
+    instance_type: c4.large
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          delete_on_termination: true
+    cpu_options:
+      core_count: 1
+      threads_per_core: 1
+
+- name: start an instance and have it begin a Tower callback on boot
+  amazon.aws.ec2_instance:
+    name: "tower-callback-test"
+    key_name: "prod-ssh-key"
+    vpc_subnet_id: subnet-5ca1ab1e
+    security_group: default
+    tower_callback:
+      # IP or hostname of tower server
+      tower_address: 1.2.3.4
+      job_template_id: 876
+      host_config_key: '[secret config key goes here]'
+    network_interfaces:
+      - assign_public_ip: true
+    image_id: ami-123456
+    cpu_credit_specification: unlimited
+    tags:
+      SomeThing: "A value"
+
+- name: start an instance with ENI (An existing ENI ID is required)
+  amazon.aws.ec2_instance:
+    name: "public-eni-instance"
+    key_name: "prod-ssh-key"
+    vpc_subnet_id: subnet-5ca1ab1e
+    network_interfaces_ids:
+      - id: "eni-12345"
+        device_index: 0
+    tags:
+      Env: "eni_on"
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          delete_on_termination: true
+    instance_type: t2.micro
+    image_id: ami-123456
+
+- name: add second ENI interface
+  amazon.aws.ec2_instance:
+    name: "public-eni-instance"
+    network_interfaces_ids:
+      - id: "eni-12345"
+        device_index: 0
+      - id: "eni-67890"
+        device_index: 1
+    image_id: ami-123456
+    tags:
+      Env: "eni_on"
+    instance_type: t2.micro
+
+- name: start an instance with metadata options
+  amazon.aws.ec2_instance:
+    name: "public-metadataoptions-instance"
+    vpc_subnet_id: subnet-5calable
+    instance_type: t3.small
+    image_id: ami-123456
+    tags:
+      Environment: Testing
+    metadata_options:
+      http_endpoint: enabled
+      http_tokens: optional
+
+# ensure number of instances running with a tag matches exact_count
+- name: start multiple instances
+  amazon.aws.ec2_instance:
+    instance_type: t3.small
+    image_id: ami-123456
+    exact_count: 5
+    region: us-east-2
+    vpc_subnet_id: subnet-0123456
+    network_interfaces:
+      - assign_public_ip: true
+        groups:
+          - default
+    tags:
+      foo: bar
+
+# launches multiple instances - specific number of instances
+- name: start specific number of multiple instances
+  amazon.aws.ec2_instance:
+    instance_type: t3.small
+    image_id: ami-123456
+    count: 3
+    region: us-east-2
+    network_interfaces:
+      - assign_public_ip: true
+        groups:
+          - default
+        subnet_id: subnet-0123456
+    state: present
+    tags:
+      foo: bar
+
+# launches an instance with a primary and a secondary network interfaces
+- name: start an instance with a primary and secondary network interfaces
+  amazon.aws.ec2_instance:
+    instance_type: t2.large
+    image_id: ami-123456
+    region: us-east-2
+    network_interfaces:
+      - assign_public_ip: true
+        groups:
+          - default
+        subnet_id: subnet-0123456
+        private_ip_addresses:
+          - primary: true
+            private_ip_address: 168.50.4.239
+          - primary: false
+            private_ip_address: 168.50.4.237
+    state: present
+    tags:
+      foo: bar
+
+# launches a mac instance with HostResourceGroupArn and LicenseSpecifications
+- name: start a mac instance with a host resource group and license specifications
+  amazon.aws.ec2_instance:
+    name: "mac-compute-instance"
+    key_name: "prod-ssh-key"
+    vpc_subnet_id: subnet-5ca1ab1e
+    instance_type: mac1.metal
+    security_group: default
+    placement:
+      host_resource_group_arn: arn:aws:resource-groups:us-east-1:123456789012:group/MyResourceGroup
+    license_specifications:
+      - license_configuration_arn: arn:aws:license-manager:us-east-1:123456789012:license-configuration:lic-0123456789
+    image_id: ami-123456
+    tags:
+      Environment: Testing
