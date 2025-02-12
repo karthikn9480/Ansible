@@ -1,0 +1,126 @@
+# Note: These examples do not set authentication details, see the AWS Guide for details.
+
+# Create a simple S3 bucket
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+
+# Create a simple S3 bucket on Ceph Rados Gateway
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    endpoint_url: http://your-ceph-rados-gateway-server.xxx
+    ceph: true
+
+# Remove an S3 bucket and any keys it contains
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: absent
+    force: true
+
+# Create a bucket, add a policy from a file, enable requester pays, enable versioning and tag
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    policy: "{{ lookup('file','policy.json') }}"
+    requester_pays: true
+    versioning: true
+    tags:
+      example: tag1
+      another: tag2
+
+# Create a simple DigitalOcean Spaces bucket using their provided regional endpoint
+- amazon.aws.s3_bucket:
+    name: mydobucket
+    endpoint_url: 'https://nyc3.digitaloceanspaces.com'
+
+# Create a bucket with AES256 encryption
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    encryption: "AES256"
+
+# Create a bucket with aws:kms encryption, KMS key
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    encryption: "aws:kms"
+    encryption_key_id: "arn:aws:kms:us-east-1:1234/5678example"
+
+# Create a bucket with aws:kms encryption, Bucket key
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    bucket_key_enabled: true
+    encryption: "aws:kms"
+
+# Create a bucket with aws:kms encryption, default key
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    encryption: "aws:kms"
+
+# Create a bucket with public policy block configuration
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    public_access:
+      block_public_acls: true
+      ignore_public_acls: true
+      ## keys == 'false' can be omitted, undefined keys defaults to 'false'
+      # block_public_policy: false
+      # restrict_public_buckets: false
+
+# Delete public policy block from bucket
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    delete_public_access: true
+
+# Create a bucket with object ownership controls set to ObjectWriter
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    object_ownership: ObjectWriter
+
+# Delete onwership controls from bucket
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    delete_object_ownership: true
+
+# Delete a bucket policy from bucket
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    policy: "null"
+
+# This example grants public-read to everyone on bucket using ACL
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    acl: public-read
+
+# Enable transfer acceleration
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    accelerate_enabled: true
+
+# Default Object Lock retention
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    object_lock_enabled: true
+    object_lock_default_retention:
+      mode: governance
+      days: 1
+# Bucket with inventory configuration:
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+    inventory:
+      - id: mys3bucket-inventory-id
+        destination:
+          bucket: "arn:aws:s3:::mys3inventorybucket"
+        optional_fields:
+          - "Size"
+        included_object_versions: "All"
+        schedule: "Weekly"
