@@ -1,0 +1,14 @@
+---
+- name: Terminate all running EC2 instances. Use with EXTREME caution.
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Terminate all running EC2 instances
+      amazon.aws.ec2_instance:
+        state: absent
+        region: us-east-1  # Your AWS region
+        vpc_subnet_id: subnet-0b827b8b55a2c198f  # The subnet ID you provided
+        aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+        aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+        wait: true
+        wait_timeout: 600  # Wait for instance termination
